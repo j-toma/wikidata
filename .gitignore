@@ -1,6 +1,10 @@
 *.json
 *.csv
 *.swp
-/postgresql_php_connect/bootstrap-4.3.1-dist
+/postgresql_php_connect/bootstrap-4.3.1-dist/css
+!/postgresql_php_connect/bootstrap-4.3.1-dist/css/bootstrap.css
+!/postgresql_php_connect/bootstrap-4.3.1-dist/css/bootstrap-grid.css
+/postgresql_php_connect/bootstrap-4.3.1-dist/js
+!/postgresql_php_connect/bootstrap-4.3.1-dist/js/bootstrap.js
 .~lock*
 /postgresql_php_connect/index.php
