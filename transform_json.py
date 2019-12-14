@@ -1,7 +1,6 @@
 import json
 from get_claims import get_claims_first
 
-#def transform(line, prps, itms):
 def transform(line):
     """
     {
@@ -9,12 +8,11 @@ def transform(line):
      "labels": {'en': [], 'zh': []},
      "descriptions": {'en': [], 'zh': []},
      "aliases": {'en': [], 'zh': []},
-     "claims": {ALL},
+     "claims": {"Pxx": "Qxx", "Pxy": "Qxy", ...},
      "sitelinks": {'enwiki': {}, 'zhwiki':{} },
     }   
     """
     q = line['id']
-    #claims = get_claims(line, prps, itms)
     claims = get_claims_first(line)
     
     en_label = ''
@@ -78,6 +76,5 @@ def transform(line):
     ]
 
     return data, item_id
-    #return q, labels, descs, aliases, claims, wikis
 
 

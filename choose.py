@@ -29,10 +29,7 @@ def choose_1(line):
 
 def choose_2(line):
     """
-    return a boolean about whether to eat or chuck this line
-    1. return english or chinese items (not properties!)
-    2. must be instance of or subclass of something else
-    3. must have a wikipedia page
+    Now unused
     """
     flag = False
 

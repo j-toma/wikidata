@@ -1,5 +1,6 @@
 *.json
-*csv
+*.csv
+*.swp
 /postgresql_php_connect/bootstrap-4.3.1-dist
 /postgresql_php_connect/vendor
 /postgresql_php_connect/composer*

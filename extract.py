@@ -7,10 +7,6 @@ from get_claims import get_claims_second
 import pandas as pd
 import cython
 
-#col_names = ['p_id', 'en_label', 'zh_label']
-#props = pd.read_csv('properties.csv',names=col_names,delimiter='|')
-#col_names = ['q_id', 'en_label', 'zh_label']
-#items = pd.read_csv('items.csv',names=col_names,delimiter='|')
 
 def csv_2_dict(filename):
     with open(filename, 'r') as f:
@@ -21,9 +17,10 @@ def csv_2_dict(filename):
     return d
 
 def second_pass():
-    #items = csv_2_dict('items.csv')
-    #props = csv_2_dict('properties.csv')
-    #with open('filtered-claims.json', 'r') as f, open('filtered-claims-2.json', 'w') as n:
+# sdd 
+#    items = csv_2_dict('items.csv')
+#    props = csv_2_dict('properties.csv')
+#    with open('filtered-claims.json', 'r') as f, open('filtered-claims-2.json', 'w') as n:
     items = csv_2_dict('/mnt/storage/wikidata/items.csv')
     props = csv_2_dict('/home/jtoma/dbClass/properties.csv')
     with open('/mnt/storage/wikidata/wikidata-first.json', 'r') as f, open('/mnt/storage/wikidata/wikidata-second.json', 'w') as n:
@@ -40,6 +37,7 @@ def second_pass():
 
 
 def first_pass():
+# ssd
 #    with open('20141103.json', 'r') as f, \
 #         open('filtered-claims.json', 'w') as n, \
 #         open('properties.csv', 'w', newline='') as p, \
@@ -85,34 +83,5 @@ def first_pass():
 #print('props_saved:', props_saved)
 
 second_pass()
-#def load_data():
-#    with open('20141103.json', 'r') as f,
-#         open('filtered.json', 'w', newline='') as n,
-#         open('properties.csv', 'w', newline='') as p:
-#         open('items.csv', 'w', newline='') as i:
-#        writer_p = csv.writer(p, delimiter = '|')
-#        writer_i = csv.writer(i, delimiter = '|')
-#        g = 0
-#        c = 0
-#        for line in f:
-#            c += 1
-#            if line == '[\n':
-#                pass
-#            elif g < 1000:
-#                line_dict = json.loads(line[:-2])
-#                clf = choose(line_dict)
-#                if clf == 'not_chosen':
-#                    pass
-#                elif clf == 'item':
-#                    item, item_id = transform(line_dict)
-#                    n.write(item + "\n")
-#                    writer_i.writerow(item_id)
-#                    g += 1
-#                elif clf == 'property':
-#                    prop = get_property(line_dict)
-#                    writer_p.writerow(prop)
-#            else:
-#                break
-#    return c, g
 
 
