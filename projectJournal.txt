@@ -1,0 +1,231 @@
+2019-12-06
+First problem. How to get the json dump? It is a 41GB file dling at 11KB/s...
+
+Can find torrents for wikipedia but not wikidata. 
+
+https://archive.org/details/wikidata-json-20141103
+dling a 2014 dump pretty fast, but total size is only 3.x gb
+finished downloading
+
+https://archive.org/details/wikidata-json-20160620
+a newer one
+
+fixing curl to handle https to see if curl speeds are faster 
+
+Putting ext4 a 700gb partition to handle the files.
+Clearing files off ssd to receive .bz2, putting them on another partion of same disk that contains the 700gb partition
+
+https://archive.org/details/wikidata-20190826-all.json.gz
+full, 2019, 1MB/s dl. will finish in 1-2 days if nothing goes wrong
+
+investating lexemes
+
+
+2019-12-07
+all data is downloaded:
+1. 2014 (3.4GB->33GB)
+https://archive.org/details/wikidata-json-20141103
+2. 2016 (16 GB -> ?) THIS IS A TTL
+https://archive.org/details/wikidata-json-20160620
+3. 2019 (56GB -> ?)
+https://archive.org/details/wikidata-20190826-all.json.gz
+
+extracted the 2014 on ssd, not enough space to extract others, will need to start working with data on hdd. first going to play with 2014 json on own computer to get familiar with data format and postgresql.
+
+preparing to decompress data
+researching json -> postgresql methods 
+https://stackoverflow.com/questions/54778762/how-to-create-a-new-table-in-postgresql-from-a-json-file-using-python-and-psyco
+
+investigating jsonb (nosql-style) vs regular columns. i think regular columns will involve a little more overhead at the beginning but is more in spirit with the assignment.
+
+ubuntu packages
+postgresql
+postgresql-contrib
+python-psycopg2
+libpq-dev
+
+consider copying rows into db (faster than insert)
+https://www.postgresql.org/docs/current/populate.html
+
+also can try pg_bulkload (seems to be faster than copy) 
+http://ossc-db.github.io/pg_bulkload/index.html
+
+jtoma@cre4dit:~$ sed -n '$=' dbClass/20141103.json 
+16,504,907
+
+wrote some code: extract, choose, transform
+
+
+2019-12-08
+tried using pigz to decompress, went back to gunzip
+had to redo the presentation because libreoffice autformatting shit the bed
+
+going to make an example db with the 2014 dataset 
+
+postgres setup uses
+https://help.ubuntu.com/community/PostgreSQL
+
+trying to copy a cat output of 1,000,000 items into a postgres db but 
+ERROR:  invalid input syntax for type json
+DETAIL:  Escape sequence "\I" is invalid.
+CONTEXT:  JSON data, line 1: ...datatype": "string", "datavalue": {"value": "IT\I...
+
+the property is 396, SBN number, i may just remove problematic properties
+
+# print a line out of a file
+sed -n '239p;240q' dbClass/filtered.json
+
+# make a bakup and del lines with \I
+sed -i.bak '/\I/d' dbClass/filtered.json
+
+#this sed method to deal with the weird excape behavior when coying into postgres is gonan be tiring
+# can try this hack from
+# http://adpgtech.blogspot.com/2014/09/importing-json-data.html
+copy the_table(jsonfield) 
+from '/path/to/jsondata' 
+csv quote e'\x01' delimiter e'\x02';
+# this looks like it will work
+# probably faster than piping a cat output to copy but may be worth testing 
+
+
+i am going to investigate indexing and querying
+
+# gets items with claim property p143 
+SELECT * from test1 WHERE data->'claims'->'P143' IS NOT NULL;
+
+# find items with an alias 'Bob Ad'
+postgres=# SELECT * from test1 WHERE data @> '{"aliases": [["Bop Ad"]]}';
+Time: 6661.617 ms (00:06.662)
+
+# find item by id
+postgres=# SELECT * from test1 WHERE data @> '{"id": "Q172"}';
+Time: 6657.604 ms (00:06.658)
+
+speed isn't very good. this db only has 1 million items, there are about 16 million in the 33gb database, so if it goes linearly with entry number that would be 360 seconds for equivalent operations in the full db
+
+tomorrow i would like to check if speed is linear, then also try indexing. 
+
+but in the end, I think im going to have to break this data up, the db will have a smaller footprint and faster queries
+
+
+2019-12-09
+
+breaking it up seems like a hassle, im just going to pust the jsonb format as much as i can
+
+# get size of db
+SELECT *, pg_size_pretty(total_bytes) AS total
+    , pg_size_pretty(index_bytes) AS INDEX
+    , pg_size_pretty(toast_bytes) AS toast
+    , pg_size_pretty(table_bytes) AS TABLE
+  FROM (
+  SELECT *, total_bytes-index_bytes-COALESCE(toast_bytes,0) AS table_bytes FROM (
+      SELECT c.oid,nspname AS table_schema, relname AS TABLE_NAME
+              , c.reltuples AS row_estimate
+              , pg_total_relation_size(c.oid) AS total_bytes
+              , pg_indexes_size(c.oid) AS index_bytes
+              , pg_total_relation_size(reltoastrelid) AS toast_bytes
+          FROM pg_class c
+          LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
+          WHERE relkind = 'r'
+  ) a
+) a;
+
+# get count of db
+SELECT COUNT(*) FROM TABLE_NAME;
+
+# take stock
+jtoma@cre4dit:~$ sed -n '$=' /mnt/storage/wikidata/wikidata.json 
+59208023
+
+I will probably keep the jsonb format for this project for convenience. i may split up the table into humans and non humans
+then i think i will aggressively remove claims whose objects are not in the db or whose properties i haven't learned in some way. so I will also have to get a list of properties 
+
+postgres=# SELECT data->'en_label' as label FROM test2 WHERE data @> '{"id":"Q42"}';
+      label      
+-----------------
+ "Douglas Adams"
+(1 row)
+
+https://stackoverflow.com/questions/32939560/pattern-matching-on-jsonb-key-value
+postgres=# SELECT data->'en_label' as label FROM test2 WHERE data->>'en_aliases' ILIKE '%Lebron%' LIMIT 10;
+ "Lebron James"
+
+Time: 5763.199 ms (00:05.763)
+
+The above is sufficient for basic queries. it is not case sensitive.
+
+now i think i need t o find a way to deal with the claims. then i will make a tool to access the db.
+
+
+2019-12-10
+
+I need to figure out how to deal with snaks now.
+
+# gets the keys from claims
+SELECT jsonb_object_keys(data->'claims') FROM test2 WHERE data@>'{"id":"Q42"}';
+
+# gets values of claims property
+postgres=# SELECT data->'claims'->>'P9' FROM test2 WHERE data@>'{"id":"Q42"}';
+
+# better way
+SELECT jsonb_array_elements(data->'claims'->'P20') FROM test2 WHERE data@>'{"id":"Q42"}';
+
+# gets the mainsnak from a claim
+SELECT jsonb_array_elements(data->'claims'->'P69')->'mainsnak'->'datavalue'->'value'->>'numeric-id'
+FROM test2
+WHERE data@>'{"id":"Q42"}';
+
+# trying to get a simple php query going 
+https://stackoverflow.com/questions/10085039/postgresql-pdoexception-with-message-could-not-find-driver
+
+http://www.postgresqltutorial.com/postgresql-php/query/
+
+postgres_php_connect is coming along little by little
+
+I am probably going to run over the database again to get the claims into a cleaner column. i just want the property and the datavalue, nothing else.
+
+
+2019-12-11
+
+today i used python to revamp the claims ;)
+
+new storage size is only 409mb for 1 million lines. I only kept one claim per property and a hardcorded the property and claim values into the claims portion of the json.
+
+postgres=# CREATE TABLE wiki_sm (
+postgres(#  id serial PRIMARY KEY,
+postgres(#  data jsonb NOT NULL
+postgres(# );
+
+2019-12-12
+modifying the ppt ans the php.
+
+2019-12-13
+
+i used this modification to preprocess:
+Modifying the filter: 
+‘en’, ‘zh’ + ‘zh-cn’ 
+description AND alias → description OR alias
+Also, i included claims for which the prop and item were not in their respective lists by just using the id.
+
+and got 24 million items with 4000 properties. this was a 12gb json and it was too big. 
+51 seconds for a q_id search
+
+postgres=# CREATE EXTENSION pg_trgm;
+CREATE EXTENSION
+Time: 41.165 ms
+postgres=# CREATE INDEX idxgin ON test2 USING gin ((data->>'en_description') gin_trgm_ops);
+CREATE INDEX
+Time: 14870.324 ms (00:14.870)
+
+got the thing working with 26 million entries using the json method. just need to tweak the website and make sure relevant files are on laptop. also need to touch up the presentation. MAYBE switch to chinese.
+
+SELECT pg_size_pretty(pg_relation_size('wiki_bg'));
+ pg_size_pretty 
+----------------
+ 10 GB
+(1 row)
+
+Time: 8.441 ms
+
+# print line3 out 
+sed -n '3{p;q}' /path/to/file
