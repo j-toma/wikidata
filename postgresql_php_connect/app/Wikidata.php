@@ -49,8 +49,7 @@ class Wikidata {
 						data->'zh_label' as zh_label,
 						data->'zh_aliases' as zh_aliases,
 						data->'zh_description' as zh_desc,
-						data->'zhwiki' as zhwiki,
-						data->'claims' as claims
+						data->'zhwiki' as zhwiki
 					FROM wiki_bg 
 					WHERE data->>'en_aliases' ILIKE '%$s%' OR 
 						  data->>'zh_aliases' ILIKE '%$s%'
@@ -67,8 +66,7 @@ class Wikidata {
 				'en_desc' => $row['en_desc'],
 				'zh_desc' => $row['zh_desc'],
 				'enwiki' => $row['enwiki'],
-				'zhwiki' => $row['zhwiki'],
-				'claims' => $row['claims']
+				'zhwiki' => $row['zhwiki']
 			];
 		}
 		return $items;
