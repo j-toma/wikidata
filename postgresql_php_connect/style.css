@@ -1,3 +1,7 @@
 body {
 	padding: 5%;
 }
+
+ul#claims {
+	font-size: 200%;
+}

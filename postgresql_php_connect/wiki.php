@@ -145,7 +145,7 @@ try {
                                 <td><?php echo htmlspecialchars($s_wiki['zhwiki']); ?></td>
                             </tr>
                             <tr>
-                                <td colspan="9"><ul> <?php foreach (json_decode($s_wiki['claims']) as $alias) : ?>
+                                <td colspan="9"><ul id="claims"> <?php foreach (json_decode($s_wiki['claims']) as $alias) : ?>
                                     <li><?php echo $alias ?></li>
                                 <?php endforeach; ?></ul></td>
                             </tr>
